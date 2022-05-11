@@ -1,0 +1,7 @@
+
+GET /GetNastaveneHodnoty HTTP/1.1<cr><lf> 
+GET /SetNastaveneHodnoty?casOhrevu=34&klima=1 HTTP/1.1<cr><lf>     //toto ma LEN 2  argumenty (keys)
+     SetNastaveneHodnoty?casOhrevu=258&klima=44739242
+
+Odpoved od WiFi nodu na prikaz GetNastaveneHodnoty:
+{"casOhrevu":60,"klima":2333}
