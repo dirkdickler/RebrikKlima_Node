@@ -349,7 +349,7 @@ void Loop_10sek(void)
 	locBuf[3] = klimaJednotkaEnable >> 16;
 	locBuf[4] = klimaJednotkaEnable >> 8;
 	locBuf[5] = (u8)klimaJednotkaEnable;
-	RS485_SendMSG(25, 2, 3, CMD_write, MsgID_HodnotyRebrikKarty, 6, locBuf, &RS485_toRx_timeout);
+	RS485_SendMSG(10, 2, 3, CMD_write, MsgID_HodnotyRebrikKarty, 6, locBuf, &RS485_toRx_timeout);
 
 	String rr = "[Loop_10sek] To RS485 posielam paket s cas_rebrikuSet: " + (String)cas_rebrikuSet +
 				"minut\r\n    a klimaJednotkaEnable (bin. obraz v DEC):" + (String)klimaJednotkaEnable + "\r\n";
