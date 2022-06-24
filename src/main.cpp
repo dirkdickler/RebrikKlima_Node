@@ -25,7 +25,6 @@
 #include "HelpFunction.h"
 #include "MyBlinker.h"
 
-
 // Replace with your network credentials
 // const char* ssid = "Grabcovi";
 // const char* password = "40177298";
@@ -64,12 +63,13 @@ IPAddress secondaryDNS(8, 8, 4, 4); // optional
 
 struct tm MyRTC_cas;
 bool Internet_CasDostupny = false; // to je ze dostava cas z Inernetu
-bool RTC_cas_OK = false;		   // ze mam RTC fakt nastaveny bud z interneru, alebo nastaveny manualne
-								   // a to teda ze v RTC mam fakr realny cas
-								   // Tento FLAG, nastavi len pri nacitanie casu z internutu, alebo do buducna manualne nastavenie casu cew WEB
+bool RTC_cas_OK = false;			  // ze mam RTC fakt nastaveny bud z interneru, alebo nastaveny manualne
+											  // a to teda ze v RTC mam fakr realny cas
+											  // Tento FLAG, nastavi len pri nacitanie casu z internutu, alebo do buducna manualne nastavenie casu cew WEB
 
 const u8 mojePrmenaae = 25;
 u16_t cnt = 0;
+u16 cntDownKlimiOFF = 0;
 
 TERMOSTAT_t room[12];
 char gloBuff[200];
@@ -112,18 +112,18 @@ void setup()
 	timer_1sek.start();
 	timer_10sek.start();
 	esp_task_wdt_init(WDT_TIMEOUT, true); // enable panic so ESP32 restarts
-	esp_task_wdt_add(NULL);				  // add current thread to WDT watch
+	esp_task_wdt_add(NULL);					  // add current thread to WDT watch
 
 	// RS485 musis spustit az tu, lebo ak ju das hore a ESP ceka na konnect wifi, a pridu nejake data na RS485, tak FreeRTOS =RESET  asi overflow;
 	Serial1.begin(9600);
 
 	led.blink(200 /* time on */,
-					  200 /* time off */,
-					  3 /* cycles */,
-					  1000 /* pause between secuences */,
-					  0 /* secuences */,
-					  NULL /* function to call when finished */
-			);
+				 200 /* time off */,
+				 3 /* cycles */,
+				 1000 /* pause between secuences */,
+				 0 /* secuences */,
+				 NULL /* function to call when finished */
+	);
 
 	// swSer.begin(115200);
 	// swSer.println("");
@@ -158,7 +158,7 @@ void Loop_10ms()
 {
 	static uint8_t TimeOut_RXdata = 0;	 // musi byt static lebo sem skaces z Loop
 	static uint16_t KolkkoNplnenych = 0; // musi byt static lebo sem skaces z Loop
-	static char budd[250];				 // musi byt static lebo sem skaces z Loop
+	static char budd[250];					 // musi byt static lebo sem skaces z Loop
 
 	uint16_t aktualny;
 	char temp[200];
@@ -304,6 +304,17 @@ void Loop_1sek(void)
 {
 	// log_i("-mam 1 sek....");
 	//  Serial.println( random(10000,20000));
+
+	if (cntDownKlimiOFF)
+	{
+		if (--cntDownKlimiOFF == 0)
+		{
+			klimaJednotkaEnable = 0;
+			DebugMsgToWebSocket("[1sek Loop]  Zhazujem ALL klima RELE - Timeout cas lebo z Wifi nedosel prikaz\r\n");
+			log_i("Zhazujem ALL klima RELE - Timeout cas lebo z Wifi nedosel prikaz\r\n");
+		}
+	}
+
 	if (Internet_CasDostupny == false)
 	{
 		//	Serial.print("Internet cas nedostupny !!,  ");
@@ -327,7 +338,7 @@ void Loop_1sek(void)
 	//	log_i("HEAP free:%s", locBuf);
 
 	String rr = "[1sek Loop] signalu: " + (String)WiFi.RSSI() + "dBm  a Heap: " + locBuf + " kB " +
-				" Ine..\r\n ";
+					" Ine..\r\n ";
 
 	DebugMsgToWebSocket(rr);
 }
@@ -352,53 +363,53 @@ void Loop_10sek(void)
 	RS485_SendMSG(10, 2, 3, CMD_write, MsgID_HodnotyRebrikKarty, 6, locBuf, &RS485_toRx_timeout);
 
 	String rr = "[Loop_10sek] To RS485 posielam paket s cas_rebrikuSet: " + (String)cas_rebrikuSet +
-				"minut\r\n    a klimaJednotkaEnable (bin. obraz v DEC):" + (String)klimaJednotkaEnable + "\r\n";
+					"minut\r\n    a klimaJednotkaEnable (bin. obraz v DEC):" + (String)klimaJednotkaEnable + "\r\n";
 	DebugMsgToWebSocket(rr);
 }
 
 void FuncServer_On(void)
 {
 	server.on("/",
-			  HTTP_GET,
-			  [](AsyncWebServerRequest *request)
-			  {
-				  log_i("Doslo HTTP_GET iba");
-				  // if (!request->authenticate("ahoj", "xxxx"))
-				  // return request->requestAuthentication();
-				  // request->send_P(200, "text/html", index_html, processor);
-				  request->send_P(200, "text/html", Main);
-			  });
+				 HTTP_GET,
+				 [](AsyncWebServerRequest *request)
+				 {
+					 log_i("Doslo HTTP_GET iba");
+					 // if (!request->authenticate("ahoj", "xxxx"))
+					 // return request->requestAuthentication();
+					 // request->send_P(200, "text/html", index_html, processor);
+					 request->send_P(200, "text/html", Main);
+				 });
 
 	server.on("/LenZobraznastavip", HTTP_GET,
-			  [](AsyncWebServerRequest *request)
-			  {
-				  LogEnebleWebPage = true;
-				  request->send(200, "text/html", handle_LenZobraz_IP_setting());
-			  });
+				 [](AsyncWebServerRequest *request)
+				 {
+					 LogEnebleWebPage = true;
+					 request->send(200, "text/html", handle_LenZobraz_IP_setting());
+				 });
 
 	server.on("/nastavip",
-			  HTTP_GET,
-			  [](AsyncWebServerRequest *request)
-			  {
-				  log_i("Doslo HTTP_GET nastavIP");
-				  if (!request->authenticate("admin", "VceliDvur"))
-					  return request->requestAuthentication();
-				  request->send(200, "text/html", handle_Zadavanie_IP_setting());
-			  });
+				 HTTP_GET,
+				 [](AsyncWebServerRequest *request)
+				 {
+					 log_i("Doslo HTTP_GET nastavIP");
+					 if (!request->authenticate("admin", "VceliDvur"))
+						 return request->requestAuthentication();
+					 request->send(200, "text/html", handle_Zadavanie_IP_setting());
+				 });
 
 	server.on("/Nastaveni",
-			  HTTP_GET,
-			  [](AsyncWebServerRequest *request)
-			  {
-				  handle_Nastaveni(request);
-				  request->send(200, "text/html", "Nastavujem a ukladam do EEPROM");
-				  log_i("Idem resetovat ESP");
-				  delay(2000);
-				  esp_restart();
-			  });
+				 HTTP_GET,
+				 [](AsyncWebServerRequest *request)
+				 {
+					 handle_Nastaveni(request);
+					 request->send(200, "text/html", "Nastavujem a ukladam do EEPROM");
+					 log_i("Idem resetovat ESP");
+					 delay(2000);
+					 esp_restart();
+				 });
 
 	server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request)
-			  {
+				 {
 				  char ttt[500];
 				  u16 citac = EEPROM.readUShort (EE_citacZapisuDoEEPORM);
 				  //u16_t citac2 = EEPROM.readUShort (EE_citac2_ZapisuDoEEPORM);
@@ -429,36 +440,37 @@ void FuncServer_On(void)
 							   "Sila signalu WIFI(-30 je akoze OK):%i<br>"
 							   "Internet cas: %s<br>"
 							   "%s %s<br>"
-								"Pocet zapisov do EEPROM:%u<br> ",
-						  firmware, WiFi.RSSI(), loc_buf, loc_buf2, loc_buf1,citac);
+								"Pocet zapisov do EEPROM:%u<br> "
+								"Cas toneho rebriku:%u<br> ",
+						  firmware, WiFi.RSSI(), loc_buf, loc_buf2, loc_buf1,citac,cas_rebrikuSet);
 
 				  request->send(200, "text/html", ttt); });
 
 	server.on("/reset",
-			  HTTP_GET,
-			  [](AsyncWebServerRequest *request)
-			  {
-				  if (!request->authenticate("admin", "radecek78"))
-					  return request->requestAuthentication();
+				 HTTP_GET,
+				 [](AsyncWebServerRequest *request)
+				 {
+					 if (!request->authenticate("admin", "radecek78"))
+						 return request->requestAuthentication();
 
-				  request->send(200, "text/html", "resetujem!!!");
-				  delay(1000);
-				  esp_restart();
-			  });
+					 request->send(200, "text/html", "resetujem!!!");
+					 delay(1000);
+					 esp_restart();
+				 });
 
 	server.on("/debug",
-			  HTTP_GET,
-			  [](AsyncWebServerRequest *request)
-			  {
-				  LogEnebleWebPage = true;
-				  request->send_P(200, "text/html", DebugLog_html);
-			  });
+				 HTTP_GET,
+				 [](AsyncWebServerRequest *request)
+				 {
+					 LogEnebleWebPage = true;
+					 request->send_P(200, "text/html", DebugLog_html);
+				 });
 
 	server.on("/GetNastaveneHodnoty", HTTP_GET, [](AsyncWebServerRequest *request)
-			  { request->send(200, "text/html", handle_GetNastaveneHodnoty()); });
+				 { request->send(200, "text/html", handle_GetNastaveneHodnoty()); });
 
 	server.on("/SetNastaveneHodnoty", HTTP_GET, [](AsyncWebServerRequest *request)
-			  { request->send(200, "text/html", handle_SetNastaveneHodnoty(request)); });
+				 { request->send(200, "text/html", handle_SetNastaveneHodnoty(request)); });
 }
 
 String handle_GetNastaveneHodnoty()
@@ -488,7 +500,7 @@ String handle_SetNastaveneHodnoty(AsyncWebServerRequest *request)
 	String jsonString = "\0";
 
 	String rr = "Prisiel JSON s pocetArgumentu: " + (String)pocetArgumentu +
-				" a to tieto \r\n ";
+					" a to tieto \r\n ";
 	DebugMsgToWebSocket(rr);
 
 	if (pocetArgumentu == 2) // pocetKlimaJednotek + 1) //+1 je glbalny cas rebriku
@@ -520,6 +532,7 @@ String handle_SetNastaveneHodnoty(AsyncWebServerRequest *request)
 
 		AsyncWebParameter *p = request->getParam(0);
 		char buff[10];
+
 		if (p->name() == "casOhrevu")
 		{
 			log_i("Json nasiel key: casOhrevu");
@@ -527,8 +540,21 @@ String handle_SetNastaveneHodnoty(AsyncWebServerRequest *request)
 			if (request->hasParam(buff))
 			{
 				String par1 = request->getParam(buff)->value(); // server.arg (buff);
-				cas_rebrikuSet = par1.toInt();
-				log_i("JSON  key: casOhrevu ma hodnotu %u", cas_rebrikuSet);
+				u16 cas_rebrikuSet_loc = par1.toInt();
+				log_i("JSON  key: casOhrevu ma hodnotu %u", cas_rebrikuSet_loc);
+
+				if (cas_rebrikuSet != cas_rebrikuSet_loc)
+				{
+					u16 temp = EEPROM.readUShort(EE_citacZapisuDoEEPORM);
+					if (1) // temp < 0xffff)
+					{
+						temp++;
+						EEPROM.writeUShort(EE_citacZapisuDoEEPORM, temp);
+					}
+					EEPROM.writeUShort(EE_cas_rebrikuSet, cas_rebrikuSet);
+					// EEPROM.writeULong(EE_klimaJednotkaEnable, klimaJednotkaEnable);
+					EEPROM.commit();
+				}
 			}
 			else
 			{
@@ -552,6 +578,7 @@ String handle_SetNastaveneHodnoty(AsyncWebServerRequest *request)
 				String par1 = request->getParam(buff)->value(); // server.arg (buff);
 				klimaJednotkaEnable = par1.toInt();
 				log_i("JSON  key: klima ma hodnotu %u", klimaJednotkaEnable);
+				cntDownKlimiOFF = 60;
 			}
 			else
 			{
@@ -576,17 +603,6 @@ String handle_SetNastaveneHodnoty(AsyncWebServerRequest *request)
 		locBuf[3] = klimaJednotkaEnable >> 16;
 		locBuf[4] = klimaJednotkaEnable >> 8;
 		locBuf[5] = (u8)klimaJednotkaEnable;
-
-		u16 temp = EEPROM.readUShort(EE_citacZapisuDoEEPORM);
-		if (1) // temp < 0xffff)
-		{
-			temp++;
-			EEPROM.writeUShort(EE_citacZapisuDoEEPORM, temp);
-		}
-		EEPROM.writeUShort(EE_cas_rebrikuSet, cas_rebrikuSet);
-		EEPROM.writeULong(EE_klimaJednotkaEnable, klimaJednotkaEnable);
-		EEPROM.commit();
-
 		RS485_SendMSG(10, 2, 3, CMD_write, MsgID_HodnotyRebrikKarty, 6, locBuf, &RS485_toRx_timeout);
 
 		String rr = "[handle_SetNastaveneHodnoty] To RS485 posielam paket\r\n";
@@ -624,13 +640,13 @@ void ESPinfo(void)
 	Serial.print(APB_CLK_FREQ);
 	Serial.println(" Hz");
 	Serial.printf("%d cores Wifi %s%s\n",
-				  chip_info.cores,
-				  (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
-				  (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
+					  chip_info.cores,
+					  (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
+					  (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
 	Serial.printf("\r\nESP32 Chip Revision: %d\r\n ", chip_info.revision);
 	Serial.printf("%dMB %s flash\r\n",
-				  spi_flash_get_chip_size() / (1024 * 1024),
-				  (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embeded" : "external");
+					  spi_flash_get_chip_size() / (1024 * 1024),
+					  (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embeded" : "external");
 
 	Serial.printf("\r\nTotal heap: %d\r\n", ESP.getHeapSize());
 	Serial.printf("Free heap: %d\r\n", ESP.getFreeHeap());
