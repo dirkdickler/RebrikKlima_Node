@@ -28,7 +28,7 @@
 // Replace with your network credentials
 // const char* ssid = "Grabcovi";
 // const char* password = "40177298";
-const char *soft_ap_ssid = "IOkarata_Klima";
+const char *soft_ap_ssid = "IOkarta_Klima";
 const char *soft_ap_password = "VceliDvur";
 // const char *ssid = "semiart";
 // const char *password = "aabbccddff";
@@ -85,7 +85,7 @@ LedBlinker led(LedOrange, COMMON_NEGATIVE);
 void setup()
 {
 	Serial.begin(115200);
-	log_i("Spustam applikaciu...1666");
+	log_i("Spustam applikaciu...1xc");
 	System_init();
 	ESPinfo();
 
@@ -101,6 +101,7 @@ void setup()
 	// }
 	// log_i("Succes to initialise EEPROM");
 
+   klimaJednotkaEnable = 0;
 	HodnotySet["casOhrevu"] = cas_rebrikuSet;
 	HodnotySet["klima"] = klimaJednotkaEnable;
 
@@ -338,7 +339,7 @@ void Loop_1sek(void)
 	//	log_i("HEAP free:%s", locBuf);
 
 	String rr = "[1sek Loop] signalu: " + (String)WiFi.RSSI() + "dBm  a Heap: " + locBuf + " kB " +
-					" Ine..\r\n ";
+					" cntDownKlimiOFF: " + cntDownKlimiOFF +"..\r\n ";
 
 	DebugMsgToWebSocket(rr);
 }
@@ -441,8 +442,9 @@ void FuncServer_On(void)
 							   "Internet cas: %s<br>"
 							   "%s %s<br>"
 								"Pocet zapisov do EEPROM:%u<br> "
-								"Cas toneho rebriku:%u<br> ",
-						  firmware, WiFi.RSSI(), loc_buf, loc_buf2, loc_buf1,citac,cas_rebrikuSet);
+								"Cas topneho rebriku(sek):%u<br> "
+								"Hodnota klim rebriku(sek):%lu<br> ",
+						  firmware, WiFi.RSSI(), loc_buf, loc_buf2, loc_buf1,citac,cas_rebrikuSet,klimaJednotkaEnable);
 
 				  request->send(200, "text/html", ttt); });
 
@@ -551,9 +553,15 @@ String handle_SetNastaveneHodnoty(AsyncWebServerRequest *request)
 						temp++;
 						EEPROM.writeUShort(EE_citacZapisuDoEEPORM, temp);
 					}
+					cas_rebrikuSet = cas_rebrikuSet_loc;
 					EEPROM.writeUShort(EE_cas_rebrikuSet, cas_rebrikuSet);
 					// EEPROM.writeULong(EE_klimaJednotkaEnable, klimaJednotkaEnable);
 					EEPROM.commit();
+					log_i("Ukladam Cas rebriku do EEPROM");
+				}
+				else
+				{
+					log_i("Na ulozenie do EEPROM cas rebtriku nedelam nic, lebo nova hodnota sa rovna starej");
 				}
 			}
 			else
@@ -578,7 +586,7 @@ String handle_SetNastaveneHodnoty(AsyncWebServerRequest *request)
 				String par1 = request->getParam(buff)->value(); // server.arg (buff);
 				klimaJednotkaEnable = par1.toInt();
 				log_i("JSON  key: klima ma hodnotu %u", klimaJednotkaEnable);
-				cntDownKlimiOFF = 60;
+				cntDownKlimiOFF = 600;
 			}
 			else
 			{

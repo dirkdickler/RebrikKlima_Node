@@ -21,7 +21,7 @@ typedef struct
 #define indexData 14
 
 #define WDT_TIMEOUT 5
-#define firmware "ver20220624_1"
+#define firmware "ver20220624_2"
 
 // EEPROM adrese
 #define EE_IPadresa 00					// 16bytes

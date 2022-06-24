@@ -273,7 +273,7 @@ int8_t NacitajEEPROM_setting(void)
 	log_i("Succes to initialise EEPROM");
 
 	cas_rebrikuSet = EEPROM.readUShort(EE_cas_rebrikuSet);
-	klimaJednotkaEnable = EEPROM.readULong(EE_klimaJednotkaEnable);
+	//klimaJednotkaEnable = EEPROM.readULong(EE_klimaJednotkaEnable);
 	EEPROM.readBytes(EE_NazovSiete, NazovSiete, 30);
 
 	if (NazovSiete[0] != 0xff) // ak mas novy modul tak EEPROM vrati prazdne hodnoty, preto ich neprepisem z EEPROM, ale necham default
@@ -613,7 +613,7 @@ void handle_Nastaveni(AsyncWebServerRequest *request)
 {
 	String inputMessage;
 	String inputParam;
-	Serial.println("Mam tu nastaveni");
+	log_i("Mam tu nastaveni");
 	log_i("Tak si idem nastavit co treba");
 
 	if (request->hasParam("input1"))
@@ -668,7 +668,7 @@ void handle_Nastaveni(AsyncWebServerRequest *request)
 	}
 
 	bool res = EEPROM.commit();
-	// log_i("EEPROM commit res je :%u ", res);
+	log_i("EEPROM commit res je :%u ", res);
 	// u16 prv = EEPROM.readString(EE_NazovSiete, NazovSiete, 30);
 	// u16 dru = EEPROM.readString(EE_Heslosiete, Heslo, 30);
 	// log_i("pocet jedna je:%u a pocet dva je:%u", prv, dru);
