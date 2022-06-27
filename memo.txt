@@ -1,7 +1,10 @@
 
 GET /GetNastaveneHodnoty HTTP/1.1<cr><lf> 
 GET /SetNastaveneHodnoty?casOhrevu=34&klima=1 HTTP/1.1<cr><lf>     //toto ma LEN 2  argumenty (keys)
-     SetNastaveneHodnoty?casOhrevu=258&klima=44739242
+     SetNastaveneHodnoty?casOhrevu=360&klima=3
+
+
+toto posiela RS 485 ka mas nastavene toto SetNastaveneHodnoty?casOhrevu=360&klima=3   >>>>  {02}{43}{0A}{00}{02}{00}{03}{80}{C8}{00}{06}{00}{5D}{E1}{0E}{10}{00}{00}{00}{03}
 
 Odpoved od WiFi nodu na prikaz GetNastaveneHodnoty:
 {"casOhrevu":60,"klima":2333}
